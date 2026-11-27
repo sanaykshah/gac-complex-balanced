@@ -32,6 +32,26 @@ structure IsComplexBalanced (N : ReactionNetwork d) (κ : Reaction N → ℝ) (x
       ∑ e ∈ Finset.univ.filter (fun e : Reaction N => e.val.2 = η),
         κ e * monomial xs e.val.1
 
+/-- **Lemma A.** Detailed balance implies complex balance.
+
+The reverse map `revR` is a bijection from the reactions with source `η` onto the reactions
+with target `η`, and detailed balance says it preserves the flux at `xs`. -/
+theorem IsDetailedBalanced.isComplexBalanced {N : ReactionNetwork d} {κ : Reaction N → ℝ}
+    {xs : Fin d → ℝ} (hdb : IsDetailedBalanced N κ xs) : IsComplexBalanced N κ xs := by
+  refine ⟨hdb.pos, fun η => ?_⟩
+  have hrev := hdb.reversible
+  refine Finset.sum_nbij' (revR hrev) (revR hrev) ?_ ?_ ?_ ?_ ?_
+  · intro e he
+    simpa using he
+  · intro e he
+    simpa using he
+  · intro e _
+    exact revR_revR hrev e
+  · intro e _
+    exact revR_revR hrev e
+  · intro e _
+    simpa using hdb.balance e
+
 end
 
 end GAC
