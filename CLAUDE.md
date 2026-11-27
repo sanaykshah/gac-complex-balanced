@@ -30,6 +30,8 @@ We work on the git branch `complex-balanced`.
 8. **Do not modify upstream files.** Everything outside `lean/GAC/ComplexBalanced/` (and this
    CLAUDE.md) belongs to BitMiracle or OpenAI. Do not edit it. Keep all license headers,
    `NOTICE`, `LICENSE`, `lean/GAC/Persistence/LICENSE` and `lean/docs/SOURCE_MAP.md` intact.
+   Exception (approved by Sanay): BitMiracle's README was moved unchanged to
+   `docs/BITMIRACLE_README.md`; the top-level `README.md` is ours.
 9. **Toolchain is pinned.** Lean 4.34.1, Mathlib `d13f23b723b8a846827a245b89c10fc7d3f11612`.
    Never run `lake update`. elan lives in `~/.elan/bin` (add it to PATH).
 
@@ -52,7 +54,7 @@ lean/GAC/ComplexBalanced/Dissipation.lean   dV/dt <= 0, = 0 iff log-gaps vanish,
 lean/GAC/ComplexBalanced/WeakReversibility.lean  complex balanced => weakly reversible (F)
 lean/GAC/ComplexBalanced/Convergence.lean   LaSalle-type step, complex-balanced main theorem (G)
 lean/GAC/ComplexBalanced/Statement.lean     the GAC statement (sacred, see rule 1) (H)
-lean/GAC/ComplexBalanced/Sanity.lean        A <=> B example (H)
+lean/GAC/ComplexBalanced/Sanity.lean        A <=> B and the cycle A -> B -> C -> A (H)
 lean/GAC/ComplexBalanced/Audit.lean         #print axioms for the main theorem and examples
 lean/GAC/ComplexBalanced/SORRIES.md         tracked sorries
 lean/GAC/ComplexBalanced/GAPS.md            anything that could not be justified

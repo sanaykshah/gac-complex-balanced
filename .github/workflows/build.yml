@@ -13,7 +13,7 @@ jobs:
         working-directory: lean
     steps:
       - name: Clean checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install elan (toolchain comes from lean/lean-toolchain, Lean 4.34.1)
         run: |
