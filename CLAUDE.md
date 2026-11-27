@@ -53,6 +53,7 @@ lean/GAC/ComplexBalanced/WeakReversibility.lean  complex balanced => weakly reve
 lean/GAC/ComplexBalanced/Convergence.lean   LaSalle-type step, complex-balanced main theorem (G)
 lean/GAC/ComplexBalanced/Statement.lean     the GAC statement (sacred, see rule 1) (H)
 lean/GAC/ComplexBalanced/Sanity.lean        A <=> B example (H)
+lean/GAC/ComplexBalanced/Audit.lean         #print axioms for the main theorem and examples
 lean/GAC/ComplexBalanced/SORRIES.md         tracked sorries
 lean/GAC/ComplexBalanced/GAPS.md            anything that could not be justified
 ```
@@ -62,13 +63,13 @@ file needs an import added.
 
 ## Milestones
 
-- [ ] M0. Branch, this file, first build
-- [ ] A. `IsComplexBalanced` definition (approved by Sanay), detailed balance implies it
-- [ ] B. Regrouping lemma
-- [ ] C-E. Dissipation under complex balance
-- [ ] F. Complex balanced implies weakly reversible
-- [ ] G. Convergence theorem for complex-balanced systems
-- [ ] H. `Statement.lean` (approved by Sanay), `Sanity.lean`, assembly, `#print axioms`
+- [x] M0. Branch, this file, first build
+- [x] A. `IsComplexBalanced` definition (approved by Sanay), detailed balance implies it
+- [x] B. Regrouping lemma
+- [x] C-E. Dissipation under complex balance
+- [x] F. Complex balanced implies weakly reversible
+- [x] G. Convergence theorem for complex-balanced systems
+- [x] H. `Statement.lean` (approved by Sanay), `Sanity.lean`, assembly, `#print axioms`
 
 ## Working style
 
