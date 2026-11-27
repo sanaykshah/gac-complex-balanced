@@ -2,5 +2,4 @@
 
 | File | Lemma | Why it is open |
 | --- | --- | --- |
-
-None as of lemma E (commit 4f6e127).
+| `GAC/ComplexBalanced/Statement.lean` | `GAC.global_attractor_conjecture_complex_balanced` | Draft statement awaiting Sanay's approval. Not to be proved until approved. |
