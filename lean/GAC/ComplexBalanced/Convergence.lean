@@ -1,13 +1,18 @@
 import GAC.ComplexBalanced.Dissipation
+import GAC.ComplexBalanced.WeakReversibility
 
 /-!
-# The LaSalle-type step for complex-balanced systems (part of Lemma G)
+# Global convergence for complex-balanced systems (Lemma G)
 
-New file. The proof of `dissip_eq_zero_of_mapClusterPt_of_nonpos` is adapted from
-`GAC.dissip_eq_zero_of_mapClusterPt` in `lean/GAC/DetailedBalance.lean`
-(BitMiracle-AI/detailed-balance-gac v1.0, Apache-2.0). Modification: the detailed-balance
-hypothesis is replaced by the only two facts the proof uses, positivity of `xs` and
-`dissip ≤ 0` on the positive orthant, so the lemma applies under complex balance.
+New file. Two proofs here are adapted from `lean/GAC/DetailedBalance.lean`
+(BitMiracle-AI/detailed-balance-gac v1.0, Apache-2.0):
+
+* `dissip_eq_zero_of_mapClusterPt_of_nonpos` from `GAC.dissip_eq_zero_of_mapClusterPt`.
+  Modification: the detailed-balance hypothesis is replaced by the only two facts the proof
+  uses, positivity of `xs` and `dissip ≤ 0` on the positive orthant.
+* `IsComplexBalanced.global_convergence` from `GAC.detailed_balanced_global_convergence`.
+  Modification: each use of detailed balance is replaced by its complex-balanced counterpart
+  (Lemmas C, D, E, F and the LaSalle step below).
 -/
 
 open Filter Topology GAC.Persistence
@@ -98,5 +103,74 @@ theorem IsComplexBalanced.dissip_eq_zero_of_mapClusterPt (hκ : ∀ e, 0 < κ e)
     dissip N κ xs z = 0 :=
   dissip_eq_zero_of_mapClusterPt_of_nonpos hcb.pos (fun _ hw => hcb.dissip_nonpos hκ hw)
     hε hx hbd hB hspeed hzpos hz
+
+/-- Under complex balance, two positive equilibria in the same compatibility class are equal.
+(Complex-balanced counterpart of `GAC.eq_of_equilibria`.) -/
+lemma IsComplexBalanced.eq_of_equilibria (hκ : ∀ e, 0 < κ e) (hcb : IsComplexBalanced N κ xs)
+    {a b : Fin d → ℝ} (ha : PositiveState a) (hb : PositiveState b)
+    (hfa : massAction N κ a = 0) (hfb : massAction N κ b = 0)
+    (hab : a - b ∈ stoichSubspace N) : a = b :=
+  eq_of_gap_zero ha hb
+    (hcb.gap_zero_of_dissip_eq_zero hκ ha (dissip_eq_zero_of_massAction_eq_zero hfa))
+    (hcb.gap_zero_of_dissip_eq_zero hκ hb (dissip_eq_zero_of_massAction_eq_zero hfb)) hab
+
+/-- **Lemma G.** Global convergence of complex-balanced mass-action systems.
+(Adapted from `GAC.detailed_balanced_global_convergence`; see the module docstring.) -/
+theorem IsComplexBalanced.global_convergence
+    (N : ReactionNetwork d) (κ : Reaction N → ℝ) (hκ : ∀ e, 0 < κ e)
+    {xs : Fin d → ℝ} (hcb : IsComplexBalanced N κ xs)
+    (x0 : Fin d → ℝ) (hx0 : PositiveState x0) :
+    ∃ xbar : Fin d → ℝ,
+      PositiveState xbar ∧ massAction N κ xbar = 0 ∧ xbar - x0 ∈ stoichSubspace N ∧
+      (∀ z : Fin d → ℝ, PositiveState z → massAction N κ z = 0 →
+        z - x0 ∈ stoichSubspace N → z = xbar) ∧
+      (∃ x : ℝ → (Fin d → ℝ), IsGlobalForwardSolution N κ x0 x) ∧
+      ∀ x : ℝ → (Fin d → ℝ), IsGlobalForwardSolution N κ x0 x →
+        Tendsto x atTop (𝓝 xbar) := by
+  rcases Nat.eq_zero_or_pos d with rfl | hd
+  · -- With no species the state space is a single point.
+    refine ⟨x0, fun i => i.elim0, Subsingleton.elim _ _,
+      by rw [sub_self]; exact Submodule.zero_mem _,
+      fun z _ _ _ => Subsingleton.elim _ _, ⟨fun _ => x0, rfl, fun t _ => ?_⟩, fun x _ => ?_⟩
+    · convert hasDerivAt_const t x0
+    · have : x = fun _ => x0 := funext fun _ => Subsingleton.elim _ _
+      rw [this]
+      exact tendsto_const_nhds
+  -- Boundedness and persistence, via Lemma F.
+  obtain ⟨ε, hε, -, ⟨x₁, hx₁⟩, hbd⟩ :=
+    bounded_persistent_of_weaklyReversible d N κ hd (hcb.weaklyReversible hκ) hκ x0 hx0
+  set S := stoichSubspace N with hSdef
+  set K : Set (Fin d → ℝ) := (Set.univ.pi fun _ => Set.Icc ε ε⁻¹) ∩ {z | z - x0 ∈ S} with hKdef
+  have hK : IsCompact K :=
+    (isCompact_univ_pi fun _ => isCompact_Icc).inter_right
+      ((S.closed_of_finiteDimensional).preimage (continuous_id.sub continuous_const))
+  have hmemK : ∀ x, IsGlobalForwardSolution N κ x0 x → ∀ t : ℝ, 0 ≤ t → x t ∈ K :=
+    fun x hx t ht => ⟨fun i _ => hbd x hx t ht i, sol_mem_class hx ht⟩
+  have hKpos : ∀ z ∈ K, PositiveState z := fun z hz i => hε.trans_le (hz.1 i (Set.mem_univ i)).1
+  obtain ⟨M, hM⟩ := hK.exists_bound_of_continuousOn (continuous_massAction N κ).continuousOn
+  have hspeed : ∀ x, IsGlobalForwardSolution N κ x0 x → ∀ t : ℝ, 0 ≤ t →
+      ‖massAction N κ (x t)‖ ≤ |M| + 1 :=
+    fun x hx t ht => (hM _ (hmemK x hx t ht)).trans (by linarith [le_abs_self M])
+  -- Cluster points are equilibria (LaSalle step, Lemmas D and E).
+  have hcl : ∀ x, IsGlobalForwardSolution N κ x0 x → ∀ z ∈ K, MapClusterPt z atTop x →
+      massAction N κ z = 0 := by
+    intro x hx z hzK hz
+    have hD := hcb.dissip_eq_zero_of_mapClusterPt hκ hε hx (hbd x hx) (by positivity)
+      (hspeed x hx) (hKpos z hzK) hz
+    exact hcb.massAction_eq_zero_of_gap (hKpos z hzK)
+      (hcb.gap_zero_of_dissip_eq_zero hκ (hKpos z hzK) hD)
+  have hev : ∀ x, IsGlobalForwardSolution N κ x0 x → ∀ᶠ t in atTop, x t ∈ K :=
+    fun x hx => eventually_atTop.mpr ⟨0, fun t ht => hmemK x hx t ht⟩
+  obtain ⟨xbar, hbarK, hbar⟩ :=
+    hK.exists_mapClusterPt (f := atTop) (u := x₁) (le_principal_iff.mpr (hev x₁ hx₁))
+  have hbar_eq := hcl x₁ hx₁ xbar hbarK hbar
+  -- Uniqueness of the positive equilibrium in the class.
+  have huniq : ∀ z : Fin d → ℝ, PositiveState z → massAction N κ z = 0 → z - x0 ∈ S →
+      z = xbar := fun z hz hfz hzS =>
+    hcb.eq_of_equilibria hκ hz (hKpos _ hbarK) hfz hbar_eq
+      (by simpa using S.sub_mem hzS hbarK.2)
+  refine ⟨xbar, hKpos _ hbarK, hbar_eq, hbarK.2, huniq, ⟨x₁, hx₁⟩, fun x hx => ?_⟩
+  exact hK.tendsto_nhds_of_unique_mapClusterPt (hev x hx) fun z hzK hz =>
+    huniq z (hKpos z hzK) (hcl x hx z hzK hz) hzK.2
 
 end GAC
