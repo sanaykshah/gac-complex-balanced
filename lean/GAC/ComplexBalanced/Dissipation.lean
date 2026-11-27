@@ -87,6 +87,22 @@ theorem IsComplexBalanced.gap_zero_of_dissip_eq_zero (hκ : ∀ e, 0 < κ e)
     mul_pos (hw e) (sub_pos.mpr (exp_mul_sub_lt_exp_sub_exp hne))
   exact hpos.ne' (hT_zero e (Finset.mem_univ e))
 
+/-- **Lemma E.** Under complex balance at `xs`, a positive state whose log-gaps all vanish is an
+equilibrium. In coordinate `i`, the reaction term `κₑ x^{yₑ} (y'ₑᵢ - yₑᵢ)` equals
+`wₑ (g(y'ₑ) - g(yₑ))` for `g(η) = e^{logRatio xs x η} ηᵢ`, so the sum vanishes by Lemma B.
+No linkage-class argument is needed. -/
+theorem IsComplexBalanced.massAction_eq_zero_of_gap (hcb : IsComplexBalanced N κ xs)
+    {x : Fin d → ℝ} (hx : PositiveState x)
+    (hg : ∀ e : Reaction N, logRatio xs x e.val.1 = logRatio xs x e.val.2) :
+    massAction N κ x = 0 := by
+  funext i
+  have hB := hcb.sum_flux_mul_sub_eq_zero (fun y => Real.exp (logRatio xs x y) * (y i : ℝ))
+  simp only [massAction, Pi.zero_apply]
+  rw [← hB]
+  refine Finset.sum_congr rfl fun e _ => ?_
+  rw [monomial_ratio hcb.pos hx, hg e]
+  ring
+
 end
 
 end GAC
