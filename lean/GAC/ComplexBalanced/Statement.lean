@@ -1,9 +1,10 @@
-import GAC.ComplexBalanced.Defs
+import GAC.ComplexBalanced.Convergence
 
 /-!
 # The Global Attractor Conjecture for complex-balanced systems (statement)
 
-New file. DRAFT, awaiting approval. SACRED once approved: see rule 1 of CLAUDE.md.
+New file. Approved by Sanay; SACRED (rule 1 of CLAUDE.md). The proof is
+`GAC.IsComplexBalanced.global_convergence` in `GAC/ComplexBalanced/Convergence.lean`.
 
 The statement has exactly the shape of `GAC.detailed_balanced_global_convergence`
 (`lean/GAC/DetailedBalance.lean`), with `IsComplexBalanced` in place of `IsDetailedBalanced`.
@@ -35,6 +36,6 @@ theorem global_attractor_conjecture_complex_balanced
       (∃ x : ℝ → (Fin d → ℝ), IsGlobalForwardSolution N κ x0 x) ∧
       ∀ x : ℝ → (Fin d → ℝ), IsGlobalForwardSolution N κ x0 x →
         Tendsto x atTop (𝓝 xbar) := by
-  sorry
+  exact IsComplexBalanced.global_convergence N κ hκ hcb x0 hx0
 
 end GAC
