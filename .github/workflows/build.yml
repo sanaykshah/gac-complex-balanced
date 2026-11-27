@@ -1,0 +1,41 @@
+name: Build and axiom check
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    defaults:
+      run:
+        working-directory: lean
+    steps:
+      - name: Clean checkout
+        uses: actions/checkout@v4
+
+      - name: Install elan (toolchain comes from lean/lean-toolchain, Lean 4.34.1)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch Mathlib build cache
+        run: lake exe cache get
+
+      - name: Full lake build
+        run: lake build
+
+      - name: Print axioms of the main theorem
+        run: |
+          cat > "$RUNNER_TEMP/Axioms.lean" <<'LEAN'
+          import GAC.ComplexBalanced.Statement
+          #print axioms GAC.global_attractor_conjecture_complex_balanced
+          LEAN
+          lake env lean "$RUNNER_TEMP/Axioms.lean" | tee "$RUNNER_TEMP/axioms.txt"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/axioms.txt" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          grep -qxF "'GAC.global_attractor_conjecture_complex_balanced' depends on axioms: [propext, Classical.choice, Quot.sound]" "$RUNNER_TEMP/axioms.txt" \
+            || { echo "::error::unexpected axioms"; exit 1; }
