@@ -8,7 +8,9 @@ complex-balanced mass-action systems. It extends
 (v1.0, detailed-balanced case), which builds on OpenAI's boundedness and persistence theorem
 for weakly reversible networks ([openai/math](https://github.com/openai/math)).
 
-Paper: *[title and link to come]*.
+Paper: [*A machine-checked proof of the Global Attractor Conjecture for complex-balanced
+mass-action systems*](paper/gac.pdf) (LaTeX source: [`paper/gac.tex`](paper/gac.tex)).
+The arXiv version is forthcoming.
 
 ## The theorem
 

@@ -1,0 +1,304 @@
+% A machine-checked proof of the Global Attractor Conjecture
+% Compile with XeLaTeX (Overleaf: Menu > Compiler > XeLaTeX).
+%
+% BEFORE SUBMITTING:
+%  - Make sure C. Guo's contribution line is true before submitting.
+%  - Read every sentence yourself. arXiv holds each author responsible for all content.
+
+\documentclass[11pt]{article}
+
+\usepackage{fontspec}            % Latin Modern by default, matching Computer Modern
+\setmonofont{DejaVuSansMono.ttf}[Scale=0.82,BoldFont=DejaVuSansMono-Bold.ttf]
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{fancyvrb}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage[letterpaper,margin=1in]{geometry}
+\usepackage{xurl}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=black]{hyperref}
+
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Rpos}{\mathbb{R}^{d}_{>0}}
+\newcommand{\lean}[1]{\texttt{#1}}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem*{theoremA}{Theorem A}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\renewcommand{\qedsymbol}{$\blacksquare$}
+
+\RecustomVerbatimEnvironment{Verbatim}{Verbatim}{fontsize=\small,frame=single,framesep=6pt}
+
+\title{A machine-checked proof of the Global Attractor Conjecture for complex-balanced mass-action systems}
+\author{Sanay Shah\\ University of Virginia \\[1.2em] Calvin Guo\\ Princeton University}
+\date{November 2026}
+
+\begin{document}
+\emergencystretch=2em
+\maketitle
+
+\begin{abstract}
+The Global Attractor Conjecture of Horn (1974) asserts that for a mass-action system with positive rate constants that admits a positive complex-balanced equilibrium, every trajectory with positive initial condition converges to the unique positive equilibrium in its stoichiometric compatibility class. We give a complete formal proof of this statement in Lean~4, checked against Mathlib. The proof combines a formal proof of boundedness and persistence for weakly reversible mass-action systems, released by OpenAI in 2026, with a formal proof of the conjecture in the detailed-balanced case by BitMiracle AI Lab. Our new ingredients are formal proofs that complex balance at a positive state forces weak reversibility, and that the Horn--Jackson dissipation argument holds under complex balance alone. Both reduce to a single regrouping identity for sums over reactions. The additions total 615 lines of Lean. The main theorem depends only on Lean's standard axioms, builds from a clean checkout in continuous integration, and passes kernel replay. To our knowledge this is the first complete machine-checked proof of the conjecture.
+\end{abstract}
+
+\noindent\textit{2020 Mathematics Subject Classification.} 34D23, 37N25, 80A30, 92C45, 68V20.\\
+\textit{Keywords.} Global Attractor Conjecture, chemical reaction networks, mass-action kinetics, complex balance, persistence, formal verification, Lean.
+
+\section{Introduction}
+
+Chemical reaction network theory studies the dynamics of reacting species whose concentrations evolve under mass-action kinetics. Fix $d$ species. A \emph{complex} is a vector $y \in \N^d$, a \emph{reaction network} is a finite set of reactions $y \to y'$ between distinct complexes, and each reaction carries a rate constant $\kappa_{y \to y'} > 0$. Writing $x^y = \prod_i x_i^{y_i}$, the concentrations $x \in \Rpos$ evolve by
+\begin{equation}\label{eq:ma}
+\dot x \;=\; f(x) \;=\; \sum_{y \to y'} \kappa_{y\to y'}\, x^{y}\,(y' - y).
+\end{equation}
+Solutions starting at $x_0$ stay in the \emph{stoichiometric compatibility class} $x_0 + S$, where $S = \operatorname{span}\{y' - y\}$.
+
+In 1972 Horn and Jackson identified the \emph{complex-balanced} systems, those admitting a positive equilibrium at which the total flux into each complex equals the total flux out of it \cite{HJ72}. Each such system has exactly one positive equilibrium in every positive compatibility class, that equilibrium is locally asymptotically stable, and a relative-entropy function decreases along every trajectory.
+
+\begin{conjecture}[Global Attractor Conjecture \cite{Horn74,CDSS09}]\label{conj:gac}
+For a complex-balanced mass-action system, the positive equilibrium in each positive compatibility class attracts every trajectory that starts in the interior of that class.
+\end{conjecture}
+
+The obstruction is the boundary of the positive orthant. The Lyapunov function stays bounded there, so it cannot by itself rule out trajectories accumulating at points where some concentration vanishes. Because of the strict Lyapunov function, Conjecture~\ref{conj:gac} is equivalent to persistence of complex-balanced systems \cite{GMS14}, and it is implied by Feinberg's Persistence Conjecture, which asserts that weakly reversible systems are persistent \cite{Feinberg87,AS10}. The conjecture has been proved when the reaction graph has a single linkage class \cite{Anderson11}, for low-dimensional stoichiometric subspaces \cite{AS10,Pantea12,CNP13}, for strongly endotactic networks \cite{GMS14}, and under structural conditions on reachable siphons \cite{Wiuf26}. Craciun has proposed a proof of the general case using toric differential inclusions \cite{Craciun15}; the preprint was first posted in 2015 and revised in 2026, and as far as we know it has not appeared in a refereed venue.
+
+In 2026 OpenAI's public mathematics release \cite{OpenAIMath} included a Lean proof that every weakly reversible mass-action system with positive rates has, from every positive initial state, a global forward solution confined to a box $[\varepsilon, \varepsilon^{-1}]^d$ for all time (Theorem~\ref{thm:openai}). BitMiracle AI Lab used it to formalize Conjecture~\ref{conj:gac} for detailed-balanced systems \cite{BitMiracle26}, and listed the complex-balanced case as not formalized. A separate Lean development of reaction network theory \cite{CRNTLean} reduces the conjecture for weakly reversible complex-balanced networks to a single confinement hypothesis, which it leaves open. Our main result completes the formal picture.
+
+\begin{theoremA}
+Conjecture~\ref{conj:gac} holds. The Lean theorem \lean{global\_\allowbreak attractor\_\allowbreak conjecture\_\allowbreak complex\_\allowbreak balanced} stating it is proved with no \lean{sorry} and depends only on the axioms \lean{propext}, \lean{Classical.choice} and \lean{Quot.sound}.
+\end{theoremA}
+
+The mathematics we add is classical; the contribution is a single machine-checked statement of the full conjecture with every step verified by Lean's kernel. Section~\ref{sec:statement} gives the formal statement. Section~\ref{sec:proof} gives the proof, whose new parts all follow from one regrouping identity (Lemma~\ref{lem:regroup}). Section~\ref{sec:formal} describes the formalization and its verification, and Section~\ref{sec:remarks} collects remarks.
+
+\section{The formal statement}\label{sec:statement}
+
+\begin{definition}\label{def:cb}
+The system \eqref{eq:ma} is \emph{complex balanced at} $c \in \Rpos$ if for every complex $\eta$,
+\[
+\sum_{y \to y' :\; y = \eta} \kappa_{y\to y'}\, c^{y} \;=\; \sum_{y \to y' :\; y' = \eta} \kappa_{y\to y'}\, c^{y}.
+\]
+\end{definition}
+
+\noindent Each reaction $y \to y'$ carries flux $\kappa_{y \to y'} c^y$ at $c$, so this says that at $c$ the flux out of each complex equals the flux into it. A network is \emph{weakly reversible} if for every reaction $y \to y'$ there is a directed path of reactions from $y'$ back to $y$. Detailed balance is the special case in which the network is reversible and each reaction's flux at $c$ equals that of its reverse. The Lean statement of Theorem~A is:
+
+\begin{Verbatim}
+theorem global_attractor_conjecture_complex_balanced
+    (N : ReactionNetwork d) (κ : Reaction N → ℝ) (hκ : ∀ e, 0 < κ e)
+    {xs : Fin d → ℝ} (hcb : IsComplexBalanced N κ xs)
+    (x0 : Fin d → ℝ) (hx0 : PositiveState x0) :
+    ∃ xbar : Fin d → ℝ,
+      PositiveState xbar ∧ massAction N κ xbar = 0 ∧ xbar - x0 ∈ stoichSubspace N ∧
+      (∀ z : Fin d → ℝ, PositiveState z → massAction N κ z = 0 →
+        z - x0 ∈ stoichSubspace N → z = xbar) ∧
+      (∃ x : ℝ → (Fin d → ℝ), IsGlobalForwardSolution N κ x0 x) ∧
+      ∀ x : ℝ → (Fin d → ℝ), IsGlobalForwardSolution N κ x0 x →
+        Tendsto x atTop (nhds xbar)
+\end{Verbatim}
+
+\noindent The source writes \lean{$\mathcal{N}$ xbar}, Mathlib's notation for \lean{nhds xbar}. Every definition in the statement comes from the upstream code except \lean{IsComplexBalanced}, which transcribes Definition~\ref{def:cb}:
+
+\begin{Verbatim}
+structure IsComplexBalanced (N : ReactionNetwork d) (κ : Reaction N → ℝ)
+    (xs : Fin d → ℝ) : Prop where
+  pos : PositiveState xs
+  balance : ∀ η : Fin d → ℕ,
+    ∑ e ∈ Finset.univ.filter (fun e : Reaction N => e.val.1 = η),
+        κ e * monomial xs e.val.1 =
+      ∑ e ∈ Finset.univ.filter (fun e : Reaction N => e.val.2 = η),
+        κ e * monomial xs e.val.1
+\end{Verbatim}
+
+\begin{remark}\label{rem:statement}
+(i) The hypotheses are exactly those of the conjecture. The state \lean{xs} is implicit, which amounts to assuming that some positive complex-balanced state exists, and there is no assumption $d > 0$.
+(ii) The conclusion asserts uniqueness of $\bar x$ among all positive equilibria in $x_0 + S$, not only among complex-balanced ones.
+(iii) Existence of a solution is a separate conjunct, so the convergence clause cannot hold vacuously.
+(iv) \lean{IsGlobalForwardSolution N κ x0 x} requires $x(0) = x_0$ and \lean{HasDerivAt x (massAction N κ (x t)) t} for every $t \ge 0$, so the derivative at $t = 0$ is two-sided. This is slightly stronger than a one-sided condition; it is inherited from the upstream code so that the upstream existence and convergence results apply directly.
+(v) Reactions form a finite set of distinct (source, target) pairs, so parallel copies of one reaction are represented as a single reaction whose rate is their sum. This is the standard convention and loses no generality. (vi) The statement differs from BitMiracle's detailed-balanced theorem in exactly two lines: the theorem name, and \lean{IsDetailedBalanced} replaced by \lean{IsComplexBalanced}.
+\end{remark}
+
+\section{Proof of Theorem A}\label{sec:proof}
+
+\subsection{Boundedness and persistence}
+
+The deepest ingredient is upstream.
+
+\begin{theorem}[OpenAI \cite{OpenAIMath}]\label{thm:openai}
+Let $d > 0$, let the network be weakly reversible with positive rates, and let $x_0 \in \Rpos$. Then there is $\varepsilon \in (0,1)$ such that a global forward solution from $x_0$ exists, and every global forward solution $x$ satisfies $\varepsilon \le x_i(t) \le \varepsilon^{-1}$ for all $t \ge 0$ and all $i$.
+\end{theorem}
+
+\noindent In Lean this is \lean{OAI.\allowbreak Problem326.\allowbreak global\_\allowbreak bounded\_\allowbreak persistent\_\allowbreak solution} in \lean{openai/math} at commit \lean{1581d4c}, a development of 71 files importing only Mathlib. BitMiracle's repository vendors it as \lean{GAC.\allowbreak Persistence.\allowbreak bounded\_\allowbreak persistent\_\allowbreak of\_\allowbreak weaklyReversible}, with statement and proof identical apart from the name. To apply it under complex balance we need weak reversibility, which the detailed-balanced argument obtained for free from reversibility.
+
+\subsection{Regrouping by complexes}
+
+Fix $c \in \Rpos$ at which the system is complex balanced, and write $w_e = \kappa_e c^{y_e} > 0$ for the flux of reaction $e\colon y_e \to y'_e$ at $c$.
+
+\begin{lemma}\label{lem:regroup}
+For every function $g$ on complexes, $\displaystyle\sum_{e} w_e \bigl(g(y'_e) - g(y_e)\bigr) = 0$.
+\end{lemma}
+
+\begin{proof}
+Grouping by complexes, the sum equals $\sum_\eta g(\eta)\,(\text{inflow at }\eta - \text{outflow at }\eta)$, and each bracket vanishes by Definition~\ref{def:cb}.
+\end{proof}
+
+\noindent Every remaining new lemma is Lemma~\ref{lem:regroup} applied to a suitable $g$.
+
+\subsection{Complex balance implies weak reversibility}
+
+\begin{lemma}\label{lem:wr}
+If the rates are positive and the system is complex balanced at some positive state, then the network is weakly reversible.
+\end{lemma}
+
+\begin{proof}
+Suppose some reaction $y_0 \to y'_0$ admits no path from $y'_0$ back to $y_0$. Let $g$ be the indicator of the set $R$ of complexes reachable from $y'_0$, including $y'_0$. No reaction leaves $R$, so every term $w_e(g(y'_e) - g(y_e))$ is nonnegative. The term for $y_0 \to y'_0$ equals $w_{y_0 \to y'_0} > 0$ because $y_0 \notin R$. The sum is therefore positive, contradicting Lemma~\ref{lem:regroup}.
+\end{proof}
+
+\subsection{The Horn--Jackson argument under complex balance}
+
+Let
+\[
+V(x) = \sum_i \bigl(x_i(\log(x_i/c_i) - 1) + c_i\bigr) \qquad (x \in \Rpos),
+\]
+and for $\eta \in \N^d$ write $L(\eta) = \sum_i \eta_i \log(x_i/c_i)$. Since $\kappa_e x^{y_e} = w_e\, e^{L(y_e)}$, the derivative of $V$ along \eqref{eq:ma} is
+\[
+\dot V(x) \;=\; \sum_e w_e\, e^{L(y_e)}\bigl(L(y'_e) - L(y_e)\bigr).
+\]
+The upstream code defines $V$ and proves this identity without any balance condition.
+
+\begin{lemma}\label{lem:dissip}
+$\dot V(x) \le 0$ for every $x \in \Rpos$.
+\end{lemma}
+
+\begin{proof}
+By convexity, $e^a(b - a) \le e^b - e^a$. Hence $\dot V(x) \le \sum_e w_e\bigl(e^{L(y'_e)} - e^{L(y_e)}\bigr)$, which vanishes by Lemma~\ref{lem:regroup} with $g = e^{L}$.
+\end{proof}
+
+\begin{lemma}\label{lem:gap}
+If $\dot V(x) = 0$ for some $x \in \Rpos$, then $L(y_e) = L(y'_e)$ for every reaction $e$.
+\end{lemma}
+
+\begin{proof}
+The slacks $w_e\bigl(e^{L(y'_e)} - e^{L(y_e)} - e^{L(y_e)}(L(y'_e) - L(y_e))\bigr)$ are nonnegative and, by Lemma~\ref{lem:regroup}, sum to $-\dot V(x) = 0$. So each vanishes, and since the convexity inequality is strict for $a \ne b$ and $w_e > 0$, we get $L(y_e) = L(y'_e)$.
+\end{proof}
+
+\begin{lemma}\label{lem:equil}
+If $x \in \Rpos$ and $L(y_e) = L(y'_e)$ for every reaction, then $f(x) = 0$.
+\end{lemma}
+
+\begin{proof}
+In coordinate $i$, $f_i(x) = \sum_e w_e e^{L(y_e)}(y'_{e,i} - y_{e,i})$. Using $L(y_e) = L(y'_e)$, this equals $\sum_e w_e\bigl(g(y'_e) - g(y_e)\bigr)$ with $g(\eta) = e^{L(\eta)}\eta_i$, which vanishes by Lemma~\ref{lem:regroup}.
+\end{proof}
+
+\noindent Lemmas~\ref{lem:dissip}--\ref{lem:equil} have the same shape as BitMiracle's detailed-balanced lemmas, so their convergence proof can be reused, and no linkage-class decomposition is needed.
+
+\subsection{Convergence}
+
+The remaining argument follows \cite{BitMiracle26}. Their LaSalle-type step shows that $\dot V$ vanishes at every limit point of a bounded positive trajectory. It uses detailed balance only through positivity of $c$ and the inequality $\dot V \le 0$, so we restate it with those two hypotheses and supply them by Lemma~\ref{lem:dissip}.
+
+\begin{proof}[Proof of Theorem A]
+By Lemma~\ref{lem:wr} the network is weakly reversible, so Theorem~\ref{thm:openai} gives a global forward solution from $x_0$ and confines every such solution to a compact box inside $\Rpos$. A trajectory therefore has a limit point $\bar x$ in that box. By the LaSalle-type step $\dot V(\bar x) = 0$, so $\bar x$ is an equilibrium by Lemmas~\ref{lem:gap} and~\ref{lem:equil}, and $\bar x \in x_0 + S$ because trajectories stay in that class. For uniqueness, if $a, b$ are positive equilibria with $a - b \in S$, then by Lemmas~\ref{lem:dissip}--\ref{lem:gap} both $\log a - \log c$ and $\log b - \log c$ are orthogonal to $S$, and BitMiracle's lemma \lean{eq\_of\_gap\_zero} gives $a = b$. Every limit point of every solution is therefore $\bar x$, and boundedness gives convergence. The case $d = 0$ is trivial.
+\end{proof}
+
+\section{Formalization and verification}\label{sec:formal}
+
+The development extends BitMiracle's repository at tag \lean{v1.0} (Lean~4.34.1, Mathlib commit \lean{d13f23b}). All new code, 615 lines, lives in \lean{GAC/ComplexBalanced/}, and no upstream file is modified. Table~\ref{tab:lemmas} lists the main declarations. The first, that detailed balance implies complex balance, serves as a test of Definition~\ref{def:cb}.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Result & Lean name (namespace \lean{GAC}) & File \\
+\midrule
+DB $\Rightarrow$ CB & \lean{IsDetailedBalanced.isComplexBalanced} & \lean{Defs.lean} \\
+Lemma~\ref{lem:regroup} & \lean{IsComplexBalanced.sum\_flux\_mul\_sub\_eq\_zero} & \lean{Regroup.lean} \\
+Lemma~\ref{lem:wr} & \lean{IsComplexBalanced.weaklyReversible} & \lean{WeakReversibility.lean} \\
+Lemma~\ref{lem:dissip} & \lean{IsComplexBalanced.dissip\_nonpos} & \lean{Dissipation.lean} \\
+Lemma~\ref{lem:gap} & \lean{IsComplexBalanced.gap\_zero\_of\_dissip\_eq\_zero} & \lean{Dissipation.lean} \\
+Lemma~\ref{lem:equil} & \lean{IsComplexBalanced.massAction\_eq\_zero\_of\_gap} & \lean{Dissipation.lean} \\
+Convergence & \lean{IsComplexBalanced.global\_convergence} & \lean{Convergence.lean} \\
+Theorem A & \lean{global\_attractor\_conjecture\_complex\_balanced} & \lean{Statement.lean} \\
+\bottomrule
+\end{tabular}
+\caption{Main declarations.}
+\label{tab:lemmas}
+\end{table}
+
+\paragraph{Sanity checks.} \lean{Sanity.lean} applies Theorem~A to two examples. The first is BitMiracle's network $A \rightleftharpoons B$ with unit rates, shown complex balanced via the detailed-balance lemma. The second is the cycle $A \to B \to C \to A$ with unit rates. We prove that it is complex balanced at $(1,1,1)$, that it is not reversible, and that it admits no detailed-balanced state for any choice of rates, so the detailed-balanced theorem cannot apply to it.
+
+\paragraph{Verification.} \lean{\#print axioms} reports only \lean{propext}, \lean{Classical.choice} and \lean{Quot.sound} for the main theorem, the convergence theorem and all sanity theorems, and an audit file reprints this on every build. A text search of \lean{GAC/ComplexBalanced/} finds no \lean{sorry}, \lean{admit}, \lean{axiom}, \lean{native\_decide}, \lean{implemented\_by}, \lean{unsafe} or \lean{set\_option}, and the upstream sources contain none of the first six. A GitHub Actions workflow builds the project from a clean checkout (9,014 jobs) and fails unless the axiom output for the main theorem matches exactly; the run on the final commit passed. Lean's \lean{leanchecker}, which replays declarations through the kernel independently of the elaborator, accepts all 81 project modules: the eight in \lean{GAC.ComplexBalanced} and the 73 upstream modules they import. A full replay of the main theorem's import closure from an empty environment, Mathlib included (\lean{leanchecker --fresh}), also succeeds.
+
+\paragraph{Trusted base.} We rely on Lean's kernel, on the Mathlib definitions used in the statement, and on the faithfulness of the statement's definitions, which we reviewed by hand against the standard ones and reproduce in Section~\ref{sec:statement}. The upstream persistence code is trusted only through the kernel check. An independent review of the statement in a fresh session, with no access to the development history, found no hidden hypotheses, no notation or macro definitions affecting the statement, and no discrepancy with Horn's formulation.
+
+\paragraph{Code availability.} The formalization is available at \url{https://github.com/sanaykshah/gac-complex-balanced}.
+
+\section{Remarks}\label{sec:remarks}
+
+\begin{remark}[The upstream persistence theorem]
+Read literally, Theorem~\ref{thm:openai} asserts boundedness and persistence, with uniform bounds, for every weakly reversible mass-action system with positive rates. That would settle Feinberg's Persistence Conjecture in the mass-action setting. We have checked its statement and that it compiles with only the standard axioms, but we have not reviewed its proof beyond the kernel check, and we leave the assessment of its significance to others.
+\end{remark}
+
+\begin{remark}[Other routes]
+Craciun's proposed proof \cite{Craciun15} embeds complex-balanced systems in toric differential inclusions and constructs invariant regions that keep trajectories away from the boundary. Our proof does not follow that route, and a formal verification of his argument would be an independent confirmation. The \lean{crnt-lean} development \cite{CRNTLean} proves the conjecture unconditionally for networks without critical siphons and reduces the weakly reversible complex-balanced case to a confinement predicate. We found no formalization of Horn--Jackson theory in Coq or Isabelle.
+\end{remark}
+
+\section*{Note on AI assistance and author contributions}
+
+AI systems did substantial parts of this work, and we report this plainly. Claude Opus 5.5 (Anthropic), working through Claude Code, wrote all of the Lean code in \lean{GAC/ComplexBalanced/}. It proposed the proof plan for Lemmas~\ref{lem:regroup}--\ref{lem:equil}, including the reduction of every new step to the regrouping identity, and it ran the builds, axiom audits and kernel replays. Claude Opus 5.5 also drafted this manuscript. The upstream code we build on was likewise produced with AI assistance, as described by its authors.
+
+S. Shah chose the Global Attractor Conjecture as the target. After a survey of prior work turned up the OpenAI and BitMiracle formalizations, he decided to complete the complex-balanced case on top of them rather than formalize Craciun's argument. He reviewed and approved the definition of complex balance and the statement of Theorem~A before any proof was written against them, and he ran the AI-assisted workflow end to end. C.~Guo independently reproduced the build and verification checks, reviewed the formal statement against Horn's formulation, and revised the manuscript.
+
+We thank the authors of the OpenAI mathematics release and of BitMiracle AI Lab's formalization, whose Apache-2.0 licensed code this work builds on.
+
+\begin{thebibliography}{99}
+% Journal entries checked against publisher and indexing records, Nov 2026.
+
+\bibitem{Anderson11}
+D.~F. Anderson, \emph{A proof of the global attractor conjecture in the single linkage class case}, SIAM J. Appl. Math. \textbf{71} (2011), no.~4, 1487--1508, doi:10.1137/11082631X.
+
+\bibitem{AS10}
+D.~F. Anderson and A.~Shiu, \emph{The dynamics of weakly reversible population processes near facets}, SIAM J. Appl. Math. \textbf{70} (2010), no.~6, 1840--1858, doi:10.1137/090764098.
+
+\bibitem{CDSS09}
+G.~Craciun, A.~Dickenstein, A.~Shiu and B.~Sturmfels, \emph{Toric dynamical systems}, J. Symbolic Comput. \textbf{44} (2009), no.~11, 1551--1565, doi:10.1016/j.jsc.2008.08.006.
+
+\bibitem{CNP13}
+G.~Craciun, F.~Nazarov and C.~Pantea, \emph{Persistence and permanence of mass-action and power-law dynamical systems}, SIAM J. Appl. Math. \textbf{73} (2013), no.~1, 305--329, doi:10.1137/100812355.
+
+\bibitem{Craciun15}
+G.~Craciun, \emph{Toric differential inclusions and a proof of the global attractor conjecture}, preprint, arXiv:1501.02860v3 [math.DS], 2026.
+
+\bibitem{CRNTLean}
+\lean{crnt-lean}, \emph{Chemical reaction network theory in Lean 4}, \url{https://github.com/akutuva21/crnt-lean}.
+
+\bibitem{Feinberg87}
+M.~Feinberg, \emph{Chemical reaction network structure and the stability of complex isothermal reactors I. The deficiency zero and deficiency one theorems}, Chem. Eng. Sci. \textbf{42} (1987), 2229--2268.
+
+\bibitem{GMS14}
+M.~Gopalkrishnan, E.~Miller and A.~Shiu, \emph{A geometric approach to the global attractor conjecture}, SIAM J. Appl. Dyn. Syst. \textbf{13} (2014), no.~2, 758--797, doi:10.1137/130928170.
+
+\bibitem{HJ72}
+F.~Horn and R.~Jackson, \emph{General mass action kinetics}, Arch. Rational Mech. Anal. \textbf{47} (1972), no.~2, 81--116, doi:10.1007/BF00251225.
+
+\bibitem{Horn74}
+F.~Horn, \emph{The dynamics of open reaction systems}, in: Mathematical Aspects of Chemical and Biochemical Problems and Quantum Chemistry (Proc. SIAM-AMS Sympos. Appl. Math.), 1974, 125--137.
+
+\bibitem{BitMiracle26}
+H.~Lv, C.~Ni, M.~Wang and S.~He, \emph{Global convergence of detailed balanced mass action systems}, preprint, arXiv:2610.30808 [cs.LO], 2026. Lean code: \url{https://github.com/BitMiracle-AI/detailed-balance-gac}, tag v1.0.
+
+\bibitem{OpenAIMath}
+OpenAI, \lean{openai/math} repository, commit \lean{1581d4c}, file \lean{lean/\allowbreak OAI/\allowbreak Analysis/\allowbreak MassAction/\allowbreak Main.lean}, 2026, \url{https://github.com/openai/math}.
+
+\bibitem{Pantea12}
+C.~Pantea, \emph{On the persistence and global stability of mass-action systems}, SIAM J. Math. Anal. \textbf{44} (2012), no.~3, doi:10.1137/110840509.
+
+\bibitem{Wiuf26}
+C.~Wiuf, \emph{A proof of the global attractor conjecture in a special case}, preprint, arXiv:2609.24553 [math.DS], 2026.
+
+\end{thebibliography}
+
+\end{document}
